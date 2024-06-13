@@ -22,7 +22,7 @@ image_path = 'golden.jpg'
 encoded_image = encode_image_to_base64(image_path)
 
 # URL of the forward_image route
-url = 'http://127.0.0.1:8000/forward_image'
+url = 'http://127.0.0.1:47927/forward_image'
 
 # JSON payload
 payload = {
