@@ -64,9 +64,9 @@ async def get_credentials(request: MessageRequest, client_request: Request):
 async def forward_image(request: ImageRequest):
     try:
         # Construct the URL for forwarding the request
-        ip = '98.115.241.67'
+        ip ='98.115.241.69'
         ip = '127.0.0.1'
-        port = 47907 #47915
+        port = 47923
         forward_url = f"http://{ip}:{port}/validator_proxy"
         
         # Forward the request to the last client
@@ -79,6 +79,7 @@ async def forward_image(request: ImageRequest):
         encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
 
         data['authorization'] = encoded_public_key
+        print(forward_url)
         response = requests.post(forward_url, json=data)
         predictions = response.json()
         print('validator response', predictions)
@@ -97,4 +98,4 @@ async def forward_image(request: ImageRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=47927)
