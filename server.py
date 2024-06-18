@@ -9,6 +9,10 @@ import logging
 import requests
 
 app = FastAPI()
+app_port = 8000
+
+validator_ip = '127.0.0.1'
+validator_proxy_port = 47926
 
 # Load the private key from a file
 with open("private_key.pem", "rb") as f:
@@ -17,6 +21,16 @@ with open("private_key.pem", "rb") as f:
 # Load the public key from a file
 with open("public_key.pem", "rb") as f:
     public_key = serialization.load_pem_public_key(f.read())
+
+
+def get_public_key():
+    public_key_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    )
+    encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
+    return encoded_public_key
+
 
 # Define the request body schema
 class MessageRequest(BaseModel):
@@ -41,11 +55,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors(), "body": exc.body},
     )
 
+
 @app.post("/get_credentials")
 async def get_credentials(request: MessageRequest, client_request: Request):
     try:
-        # Get the message from the request
-        message = b"This is a secure message"
+        message = b"bitmindaigeneratedimagedetectionsubnet"
         
         # Sign the message with the private key
         signature = private_key.sign(message)
@@ -60,26 +74,42 @@ async def get_credentials(request: MessageRequest, client_request: Request):
         logger.error(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+
+@app.get("/miner_performance")
+async def miner_performance():
+    try:
+        # Construct the URL for forwarding the request
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/miner_performance"
+        print(forward_url)
+
+        # Forward the request to the last client
+        data = {}
+        data['authorization'] = get_public_key()
+
+        response = requests.get(forward_url, json=data)
+        predictions = response.json()
+        print('validator response', predictions)
+
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json()
+        )
+    except Exception as e:
+        logger.error(f"Failed to forward request: {e}")
+        raise HTTPException(status_code=500, detail="Failed to forward the request")
+
+
 @app.post("/forward_image")
 async def forward_image(request: ImageRequest):
     try:
         # Construct the URL for forwarding the request
-        ip ='98.115.241.69'
-        ip = '127.0.0.1'
-        port = 47923
-        forward_url = f"http://{ip}:{port}/validator_proxy"
-        
+        forward_url = f"http://{validator_ip}:{validator_proxy_port}/validator_proxy"
+        print(forward_url)
+
         # Forward the request to the last client
         data = request.dict()
+        data['authorization'] = get_public_key()
 
-        public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw
-        )
-        encoded_public_key = base64.b64encode(public_key_bytes).decode('utf-8')
-
-        data['authorization'] = encoded_public_key
-        print(forward_url)
         response = requests.post(forward_url, json=data)
         predictions = response.json()
         print('validator response', predictions)
@@ -96,6 +126,7 @@ async def forward_image(request: ImageRequest):
         logger.error(f"Failed to forward request: {e}")
         raise HTTPException(status_code=500, detail="Failed to forward the request")
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=47927)
+    uvicorn.run(app, host="0.0.0.0", port=app_port)
